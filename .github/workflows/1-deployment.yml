@@ -34,6 +34,11 @@ jobs:
           python3 ./scripts/all_mnemonic_csv_generator.py  ./ ./outputs/malign_pe_files_general_mnemonic.csv
           cat ./outputs/malign_pe_files_general_mnemonic.csv
 
+      - name: Disassemble and generate MULTILABEL MNEMONIC CODES CSV
+        run: |
+          python3 ./scripts/multi_label_mnemonic_csv_generator.py  ./ ./outputs/malign_pe_files_multilabel_mnemonic.csv
+          cat ./outputs/malign_pe_files_multilabel_mnemonic.csv
+
       - name: Saving CSV in artifactory
         uses: actions/upload-artifact@v3
         with:
