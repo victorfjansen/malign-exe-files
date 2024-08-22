@@ -40,15 +40,6 @@ def disassemble_file(file_path):
     
     return filtered_disassembly
 
-def get_locally_most_common_sequences(disassembly):
-    filtered_disassembly = [] 
-    for instruction in disassembly:
-        instruction_mnemonic = instruction.split("\t")[0]
-        if any(item[0] == instruction_mnemonic for item in mnemonic_counter.most_common(31)):
-            filtered_disassembly.append(instruction_mnemonic)
-    
-    return filtered_disassembly
-
 def process_directory(input_directory, csv_output_path):
     # Open the CSV file for writing
     with open(csv_output_path, "w", newline="") as csvfile:
@@ -64,17 +55,16 @@ def process_directory(input_directory, csv_output_path):
                     try:
                         print(f"Processing {filename}...")
                         disassembled_code = disassemble_file(input_path)
-                        most_common_opcodes = get_locally_most_common_sequences(disassembled_code)
-                        opcode_sequence = " ".join(most_common_opcodes)
+                        opcode_sequence = " ".join(disassembled_code)
                     except:
                         continue
                     
-                    # Extract the malware type from the directory name
-                    malware_type = os.path.basename(root)
+                    # Extract the top-level directory name
+                    top_folder = os.path.relpath(root, input_directory).split(os.sep)[0]
                     
-                    # Write the row to the CSV with the malware type
-                    csvwriter.writerow([malware_type, opcode_sequence])
-                    print(f"CSV row added for {filename} with label '{malware_type}'")
+                    # Write the row to the CSV with the top-level folder as the label
+                    csvwriter.writerow([top_folder, opcode_sequence])
+                    print(f"CSV row added for {filename} with label '{top_folder}'")
 
 if __name__ == "__main__":
     import sys
