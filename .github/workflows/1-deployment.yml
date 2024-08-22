@@ -1,0 +1,66 @@
+name: Create CSV from Malign Files
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  run-csv-mnemonic-generator:
+    name: Run OPCODES CSV Generator
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+    
+      - name: Set up python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install capstone pefile
+
+      - name: Disassemble and generate most common MNEMONIC CODES CSV
+        run: |
+          python3 ./scripts/most_common_mnemonic_csv_generator.py  ./ ./outputs/malign_pe_files_most_common_mnemonic.csv
+          cat ./outputs/malign_pe_files_most_common_mnemonic.csv
+
+      - name: Disassemble and generate GENERAL MNEMONIC CODES CSV
+        run: |
+          python3 ./scripts/all_mnemonic_csv_generator.py  ./ ./outputs/malign_pe_files_general_mnemonic.csv
+          cat ./outputs/malign_pe_files_general_mnemonic.csv
+
+      - name: Saving CSV in artifactory
+        uses: actions/upload-artifact@v3
+        with:
+          name: MalwareAnalysis_malign_files
+          path: ./outputs/
+  
+  deploy-to-s3:
+    name: Deploy to S3
+    needs: run-csv-mnemonic-generator
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: aws_malware_analysis
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download malign Files
+        uses: actions/download-artifact@v3
+        with:
+          name: MalwareAnalysis_malign_files
+          path: ./outputs/
+
+      - name: Deploy to S3
+        uses: jakejarvis/s3-sync-action@master
+        with:
+          args: --acl public-read --follow-symlinks --delete
+        env:
+          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          SOURCE_DIR: './outputs/'
