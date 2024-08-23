@@ -60,7 +60,8 @@ def process_directory(input_directory, csv_output_path):
                         continue
                     
                     # Write the row to the CSV
-                    csvwriter.writerow(["malware", opcode_sequence])
+                    if opcode_sequence:
+                        csvwriter.writerow(["malware", opcode_sequence])
                     print(f"CSV row added for {filename}")
 
 if __name__ == "__main__":

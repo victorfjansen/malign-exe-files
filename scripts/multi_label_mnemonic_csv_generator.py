@@ -63,7 +63,8 @@ def process_directory(input_directory, csv_output_path):
                     top_folder = os.path.relpath(root, input_directory).split(os.sep)[0]
                     
                     # Write the row to the CSV with the top-level folder as the label
-                    csvwriter.writerow([top_folder, opcode_sequence])
+                    if opcode_sequence:
+                        csvwriter.writerow([top_folder, opcode_sequence])
                     print(f"CSV row added for {filename} with label '{top_folder}'")
 
 if __name__ == "__main__":
