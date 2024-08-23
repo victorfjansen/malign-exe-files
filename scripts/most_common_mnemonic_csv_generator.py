@@ -52,7 +52,7 @@ def get_locally_most_common_sequences(disassembly):
 def process_directory(input_directory, csv_output_path):
     with open(csv_output_path, "w", newline="") as csvfile:
         csvwriter = csv.writer(csvfile)
-        csvwriter.writerow(["type", "opcodes"])  # Write CSV header
+        csvwriter.writerow(["type", "opcodes", "file_name"])  # Write CSV header with the new column
 
         for root, _, files in os.walk(input_directory):
             for filename in files:
@@ -68,7 +68,7 @@ def process_directory(input_directory, csv_output_path):
                         continue
                     
                     if opcode_sequence:
-                        csvwriter.writerow(["malware", opcode_sequence])
+                        csvwriter.writerow(["malware", opcode_sequence, filename])  # Include file name in the CSV row
                     print(f"CSV row added for {filename}")
 
 if __name__ == "__main__":

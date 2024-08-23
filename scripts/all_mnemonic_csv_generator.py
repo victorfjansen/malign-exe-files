@@ -44,7 +44,7 @@ def process_directory(input_directory, csv_output_path):
     # Open the CSV file for writing
     with open(csv_output_path, "w", newline="") as csvfile:
         csvwriter = csv.writer(csvfile)
-        csvwriter.writerow(["type", "opcodes"])  # Write CSV header
+        csvwriter.writerow(["type", "opcodes", "file_name"])  # Write CSV header with the new column
 
         # Walk through the directory tree
         for root, _, files in os.walk(input_directory):
@@ -59,9 +59,9 @@ def process_directory(input_directory, csv_output_path):
                     except:
                         continue
                     
-                    # Write the row to the CSV
+                    # Write the row to the CSV, including the file name
                     if opcode_sequence:
-                        csvwriter.writerow(["malware", opcode_sequence])
+                        csvwriter.writerow(["malware", opcode_sequence, filename])
                     print(f"CSV row added for {filename}")
 
 if __name__ == "__main__":
