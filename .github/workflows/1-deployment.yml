@@ -26,17 +26,14 @@ jobs:
       - name: Disassemble and generate most common MNEMONIC CODES CSV
         run: |
           python3 ./scripts/most_common_mnemonic_csv_generator.py  ./ ./outputs/malign_pe_files_most_common_mnemonic.csv
-          cat ./outputs/malign_pe_files_most_common_mnemonic.csv
 
       - name: Disassemble and generate GENERAL MNEMONIC CODES CSV
         run: |
           python3 ./scripts/all_mnemonic_csv_generator.py  ./ ./outputs/malign_pe_files_general_mnemonic.csv
-          cat ./outputs/malign_pe_files_general_mnemonic.csv
 
       - name: Disassemble and generate MULTILABEL MNEMONIC CODES CSV
         run: |
           python3 ./scripts/multi_label_mnemonic_csv_generator.py  ./ ./outputs/malign_pe_files_multilabel_mnemonic.csv
-          cat ./outputs/malign_pe_files_multilabel_mnemonic.csv
 
       - name: Get Hexadecimal Image from PE Headers 💀
         run: |
