@@ -49,7 +49,7 @@ def process_directory(input_directory, csv_output_path):
         # Walk through the directory tree
         for root, _, files in os.walk(input_directory):
             for filename in files:
-                if filename.endswith((".exe", ".bin")):
+                if os.path.splitext(filename)[1]:
                     input_path = os.path.join(root, filename)
                     
                     try:
@@ -62,7 +62,7 @@ def process_directory(input_directory, csv_output_path):
                     # Write the row to the CSV, including the file name
                     if opcode_sequence:
                         csvwriter.writerow(["malware", opcode_sequence, filename])
-                    print(f"CSV row added for {filename}")
+                        print(f"CSV row added for {filename}")
 
 if __name__ == "__main__":
     import sys

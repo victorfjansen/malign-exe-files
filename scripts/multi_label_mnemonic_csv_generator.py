@@ -58,7 +58,7 @@ def process_directory(input_directory, csv_output_path):
         # Walk through the directory tree
         for root, _, files in os.walk(input_directory):
             for filename in files:
-                if filename.endswith((".exe", ".bin")):
+                if os.path.splitext(filename)[1]:
                     input_path = os.path.join(root, filename)
                     
                     try:

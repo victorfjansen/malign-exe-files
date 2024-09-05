@@ -47,7 +47,7 @@ def process_directory(input_dir, output_dir):
     
     for root, _, files in os.walk(input_dir):
         for filename in files:
-            if filename.endswith(('.exe', ".bin")):
+            if os.path.splitext(filename)[1]:
                 exe_path = os.path.join(root, filename)
                 hex_data = exe_to_hex(exe_path)
                 decimal_data = hex_to_decimal(hex_data)
