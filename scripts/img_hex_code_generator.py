@@ -59,9 +59,8 @@ def create_image_from_data(data, output_filepath):
         image.putdata(image_data)
         image.save(output_filepath)
     
-    except TimeoutException:
+    except:
         raise TimeoutException(f"Image generation for {output_filepath} timed out.")
-    
     finally:
         signal.alarm(5)  # Reset the alarm
 
@@ -72,7 +71,8 @@ def process_directory(input_dir, output_dir):
     
     for root, _, files in os.walk(input_dir):
         for filename in files:
-            if os.path.splitext(filename)[1]:
+            extension = os.path.splitext(filename)[1]
+            if extension and "pack" not in extension and "rev" not in extension:
                 exe_path = os.path.join(root, filename)
                 hex_data = exe_to_hex(exe_path)
                 decimal_data = hex_to_decimal(hex_data)
@@ -88,11 +88,8 @@ def process_directory(input_dir, output_dir):
                 try:
                     create_image_from_data(decimal_data, output_file)
                     print(f"Processed {filename} into image {output_file}")
-                except TimeoutException as e:
-                    print(f"Failed to process {filename}: {e}")
-                    continue
                 except:
-                    print(f"Failed to process {filename}: {e}")
+                    print(f"Failed to process {filename}")
                     continue
 
 def main():
