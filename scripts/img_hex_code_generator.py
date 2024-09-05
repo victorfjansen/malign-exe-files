@@ -63,7 +63,7 @@ def create_image_from_data(data, output_filepath):
         raise TimeoutException(f"Image generation for {output_filepath} timed out.")
     
     finally:
-        signal.alarm(10)  # Reset the alarm
+        signal.alarm(5)  # Reset the alarm
 
 # Process each directory
 def process_directory(input_dir, output_dir):
@@ -90,6 +90,7 @@ def process_directory(input_dir, output_dir):
                     print(f"Processed {filename} into image {output_file}")
                 except TimeoutException as e:
                     print(f"Failed to process {filename}: {e}")
+                    continue
                 except Exception as e:
                     print(f"Failed to process {filename}: {e}")
                     continue
