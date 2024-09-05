@@ -91,7 +91,7 @@ def process_directory(input_dir, output_dir):
                 except TimeoutException as e:
                     print(f"Failed to process {filename}: {e}")
                     continue
-                except Exception as e:
+                except:
                     print(f"Failed to process {filename}: {e}")
                     continue
 
