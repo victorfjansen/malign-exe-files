@@ -66,6 +66,7 @@ def process_directory(input_dir, output_dir):
                     print(f"Processed {filename} into image {output_file}")
                 except Exception as e:
                     print(f"Failed to process {filename}: {e}")
+                    continue
 
 def main():
     parser = argparse.ArgumentParser(description='Convert .exe files to images.')
