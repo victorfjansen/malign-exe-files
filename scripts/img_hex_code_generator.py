@@ -72,7 +72,7 @@ def process_directory(input_dir, output_dir):
     for root, _, files in os.walk(input_dir):
         for filename in files:
             extension = os.path.splitext(filename)[1]
-            if extension and "pack" not in extension and "rev" not in extension:
+            if extension and "csv" not in extension and "py" not in extension and "md" not in extension:
                 try:
                     exe_path = os.path.join(root, filename)
                     hex_data = exe_to_hex(exe_path)
@@ -84,7 +84,7 @@ def process_directory(input_dir, output_dir):
                     if not os.path.exists(output_directory):
                         os.makedirs(output_directory)
                     
-                    output_file = os.path.join(output_directory, os.path.splitext(filename)[0] + '.png')
+                    output_file = os.path.join(output_directory, filename+ '.png')
                     
                     create_image_from_data(decimal_data, output_file)
                     print(f"Processed {filename} into image {output_file}")
