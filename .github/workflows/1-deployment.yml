@@ -23,10 +23,6 @@ jobs:
           python3 -m pip install --upgrade pip
           pip install capstone pefile pillow
 
-      - name: Get Hexadecimal Image from PE Headers 💀
-        run: |
-          python3 ./scripts/img_hex_code_generator.py ./ ./outputs/malign_pe_files_images/
-
       - name: Disassemble and generate most common MNEMONIC CODES CSV
         run: |
           python3 ./scripts/most_common_mnemonic_csv_generator.py  ./ ./outputs/malign_pe_files_most_common_mnemonic.csv
@@ -38,6 +34,19 @@ jobs:
       - name: Disassemble and generate MULTILABEL MNEMONIC CODES CSV
         run: |
           python3 ./scripts/multi_label_mnemonic_csv_generator.py  ./ ./outputs/malign_pe_files_multilabel_mnemonic.csv
+
+      - name: Generate Matrix Probabilities
+        run: |
+          python3 ./scripts/matrix_probability.py ./outputs/malign_pe_files_general_mnemonic.csv ./outputs/malware-graph-extraction/
+
+      - name: Generate Dominant Eigen Vector (Power Interaction)
+        run: |
+          python3 ./scripts/power_iteraction_embbed.py ./outputs/malware-graph-extraction/_matrix_probability/ ./outputs/malware-graph-extraction/_embeddings/
+
+
+      - name: Get Hexadecimal Image from PE Headers 💀
+        run: |
+          python3 ./scripts/img_hex_code_generator.py ./ ./outputs/malign_pe_files_images/
 
       - name: Saving CSV in artifactory
         uses: actions/upload-artifact@v3
