@@ -21,7 +21,7 @@ jobs:
       - name: Install dependencies
         run: |
           python3 -m pip install --upgrade pip
-          pip install capstone pefile pillow networkx matplotlib
+          pip install capstone pefile pillow networkx matplotlib scipy
 
       - name: Disassemble and generate most common MNEMONIC CODES CSV
         run: |
