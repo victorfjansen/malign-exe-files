@@ -1,110 +1,156 @@
 import argparse
-import networkx as nx
-import matplotlib.pyplot as plt
+import pandas as pd
 import numpy as np
-from collections import defaultdict
 import os
-import csv
 import sys
+from collections import Counter
+from itertools import islice
+import matplotlib.pyplot as plt
+from multiprocessing import Pool, cpu_count
+import logging
 
-# Increase the CSV field size limit
-csv.field_size_limit(sys.maxsize)
+# Removed: csv.field_size_limit(sys.maxsize)
 
 def parse_assembly(assembly_code):
-    instructions = [line.strip() for line in assembly_code.split() if line.strip()]
-    parsed_instructions = []
-    
-    for instruction in instructions:
-        parts = instruction.split()
-        op_code = parts[0]
-        parsed_instructions.append(op_code)
-    
-    return parsed_instructions
+    """
+    Parse assembly code into a list of opcodes.
+    """
+    # Split by any whitespace and filter out empty strings
+    return [opcode.strip() for opcode in assembly_code.split() if opcode.strip()]
 
 def build_opcode_sequence_counts(opcodes):
-    pair_count = defaultdict(lambda: defaultdict(int))
-    
-    for i in range(len(opcodes) - 1):
-        current_op = opcodes[i]
-        next_op = opcodes[i + 1]
-        pair_count[current_op][next_op] += 1
-    
-    return pair_count
+    """
+    Count consecutive opcode pairs.
+    """
+    # Create pairs using zip and count them using Counter
+    pairs = zip(opcodes, islice(opcodes, 1, None))
+    return Counter(pairs)
 
-def build_cfg(opcodes, pair_count):
+def build_cfg(opcodes, pair_counts):
+    """
+    Build the Control Flow Graph (CFG) represented as an adjacency matrix.
+    """
+    # Extract unique opcodes
+    unique_opcodes = list(set(opcodes))
+    opcode_to_idx = {opcode: idx for idx, opcode in enumerate(unique_opcodes)}
+    num_opcodes = len(unique_opcodes)
+
+    # Initialize adjacency matrix
+    matrix = np.zeros((num_opcodes, num_opcodes), dtype=np.float32)
+
+    # Populate the matrix with transition counts
+    for (op1, op2), count in pair_counts.items():
+        idx1 = opcode_to_idx[op1]
+        idx2 = opcode_to_idx[op2]
+        matrix[idx1, idx2] += count
+
+    # Normalize the matrix to get probabilities
+    row_sums = matrix.sum(axis=1, keepdims=True)
+    row_sums[row_sums == 0] = 1  # Prevent division by zero
+    matrix = matrix / row_sums
+
+    return unique_opcodes, matrix
+
+def plot_cfg(unique_opcodes, matrix, output_file):
+    """
+    Plot the Control Flow Graph (CFG) and save it as an image.
+    """
+    import networkx as nx  # Imported here to avoid global dependency if plotting is skipped
+
     G = nx.DiGraph()
-    
-    unique_opcodes = set(opcodes)
-    for op_code in unique_opcodes:
-        G.add_node(op_code)
-    
-    for op1 in pair_count:
-        total = sum(pair_count[op1].values())
+    G.add_nodes_from(unique_opcodes)
 
-        for op2 in pair_count[op1]:
-            weight = pair_count[op1][op2] / total if total > 0 else 0
-            G.add_edge(op1, op2, weight=weight)
-    
-    return G
+    # Add edges with weights
+    rows, cols = np.where(matrix > 0)
+    for i, j in zip(rows, cols):
+        weight = matrix[i, j]
+        G.add_edge(unique_opcodes[i], unique_opcodes[j], weight=weight)
 
-def build_matrix(G):
-    nodes = list(G.nodes())
-    node_index = {node: idx for idx, node in enumerate(nodes)}
-    matrix = np.zeros((len(nodes), len(nodes)))
-    
-    for node1 in G.nodes():
-        for node2 in G.nodes():
-            if G.has_edge(node1, node2):
-                matrix[node_index[node1], node_index[node2]] = G[node1][node2]['weight']
-    
-    return matrix
+    # Use a faster layout algorithm with limited iterations
+    pos = nx.spring_layout(G, k=0.15, iterations=20)
 
-def plot_cfg(G, output_file):
-    pos = nx.spring_layout(G) 
+    plt.figure(figsize=(10, 8))
+    nx.draw_networkx_nodes(G, pos, node_size=500, node_color='lightblue')
+    nx.draw_networkx_edges(G, pos, alpha=0.5)
+    nx.draw_networkx_labels(G, pos, font_size=8, font_weight='bold')
 
-    plt.figure(figsize=(15, 10))
-    nx.draw(G, pos, with_labels=True, node_size=3000, node_color='lightblue', font_size=10, font_weight='bold', edge_color='gray')
     plt.title('Control Flow Graph')
-
-    plt.savefig(output_file)
+    plt.axis('off')
+    plt.tight_layout()
+    plt.savefig(output_file, bbox_inches='tight', dpi=150)
     plt.close()
 
-def process_files(csv_file, output_dir):
-    matrix_probability_dir = os.path.join(output_dir, '_matrix_probability')
-    graphs_dir = os.path.join(output_dir, '_graphs_images')
-    
-    os.makedirs(matrix_probability_dir, exist_ok=True)
-    os.makedirs(graphs_dir, exist_ok=True)
-    
-    with open(csv_file, 'r') as file:
-        reader = csv.DictReader(file)
-        
-        for row in reader:
-            assembly_code = row['opcodes']
-            file_name = row['file_name']
-            
-            opcodes = parse_assembly(assembly_code)
-            pair_count = build_opcode_sequence_counts(opcodes)
-            G = build_cfg(opcodes, pair_count)
-            matrix = build_matrix(G)
-            
-            matrix_probability_file = os.path.join(matrix_probability_dir, f"{file_name}_matrix_probability.txt")
-            plot_file = os.path.join(graphs_dir, f"{file_name}_cfg.png")
-            
-            np.savetxt(matrix_probability_file, matrix, fmt='%.2f', delimiter='\t', header='\t'.join(G.nodes()))
-            print(f"Adjacency Matrix Probability with Weights saved to: {matrix_probability_file}")
+def process_row(args):
+    """
+    Process a single row from the CSV: parse opcodes, build CFG, save matrix and plot.
+    """
+    assembly_code, file_name, matrix_dir, graphs_dir = args
 
-            plot_cfg(G, plot_file)
-            print(f"Control Flow Graph saved to: {plot_file}")
+    opcodes = parse_assembly(assembly_code)
+    if len(opcodes) < 2:
+        return f"Skipped {file_name}: not enough opcodes."
+
+    pair_counts = build_opcode_sequence_counts(opcodes)
+    unique_opcodes, matrix = build_cfg(opcodes, pair_counts)
+
+    # Save the adjacency matrix with headers
+    matrix_file = os.path.join(matrix_dir, f"{file_name}_matrix_probability.txt")
+    header = '\t'.join(unique_opcodes)
+    np.savetxt(matrix_file, matrix, fmt='%.4f', delimiter='\t', header=header, comments='')
+
+    # Plot and save the CFG
+    plot_file = os.path.join(graphs_dir, f"{file_name}_cfg.png")
+    plot_cfg(unique_opcodes, matrix, plot_file)
+
+    return f"Processed {file_name}"
+
+def process_files(csv_file, output_dir):
+    """
+    Read the CSV file and process each row in parallel.
+    """
+    # Set up output directories
+    matrix_dir = os.path.join(output_dir, '_matrix_probability')
+    graphs_dir = os.path.join(output_dir, '_graphs_images')
+    os.makedirs(matrix_dir, exist_ok=True)
+    os.makedirs(graphs_dir, exist_ok=True)
+
+    # Configure logging
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+    # Read CSV using pandas for faster I/O
+    try:
+        df = pd.read_csv(csv_file, usecols=['opcodes', 'file_name'], engine='c')
+    except Exception as e:
+        logging.error(f"Error reading CSV file: {e}")
+        sys.exit(1)
+
+    # Prepare arguments for multiprocessing
+    args_list = [
+        (row.opcodes, row.file_name, matrix_dir, graphs_dir)
+        for row in df.itertuples(index=False)
+    ]
+
+    # Set up multiprocessing pool
+    num_workers = max(1, cpu_count() - 1)  # Reserve one CPU
+    with Pool(processes=num_workers) as pool:
+        for result in pool.imap_unordered(process_row, args_list):
+            logging.info(result)
 
 def main():
+    """
+    Parse command-line arguments and initiate processing.
+    """
     parser = argparse.ArgumentParser(description="Generate control flow graphs from assembly code in a CSV file.")
-    parser.add_argument("csv_file", help="CSV file path containing assembly code and file names.")
-    parser.add_argument("output_dir", help="Directory path where output files will be saved.")
-    
+    parser.add_argument("csv_file", help="Path to the CSV file containing 'opcodes' and 'file_name' columns.")
+    parser.add_argument("output_dir", help="Directory where output matrices and graphs will be saved.")
+
     args = parser.parse_args()
-    
+
+    if not os.path.isfile(args.csv_file):
+        print(f"CSV file not found: {args.csv_file}")
+        sys.exit(1)
+
     process_files(args.csv_file, args.output_dir)
 
 if __name__ == "__main__":
-    main()
+        main()
